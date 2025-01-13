@@ -1,0 +1,78 @@
+Organizational Employee Productivity Tracking System
+Project Overview
+The Organizational Employee Productivity Tracking System is a proof-of-concept software designed to monitor and track employee activities in real-time. It ensures maximum productivity and accountability by capturing work hours, task progress, application usage, keystrokes, and overall performance. Additionally, the software tracks activities performed in both productive workspaces and local environments. Equipped with anti-tampering mechanisms, it cannot be uninstalled or bypassed by employees, providing comprehensive insights into workplace behavior and productivity.
+Objectives
+• Monitor Work Hours: Track employee clock-in and clock-out times for accurate time accountability.
+• Track Task Progress: Monitor the progress of assigned tasks to assess productivity.
+• Analyze Application Usage: Ensure employees are using authorized applications for work-related tasks.
+• Capture Employee Activities: Log activities such as keystrokes, application interactions, and system usage.
+• Distinguish Workspaces: Differentiate between productive workspace activities and local environment usage.
+• Prevent Tampering: Implement mechanisms to prevent employees from uninstalling or bypassing the software.
+• Enhance Productivity: Provide data-driven insights to optimize workflows and improve organizational efficiency.
+• Generate Reports: Create detailed performance reports for informed decision-making.
+• Support Management: Enable managers to evaluate and enhance employee accountability.
+System Modules and Features
+User Management
+• Register and authenticate users.
+• Manage user roles (e.g., employee, admin).
+• Enable profile creation, updates, and deactivation.
+• List and filter users based on roles and statuses.
+Activity Tracker
+• Log real-time activities such as keystrokes and task updates.
+• Track application usage and system interactions.
+• Provide daily summaries of employee activities.
+Analytical Tool
+• Analyze productivity trends and task completion rates.
+• Track workspace usage (productive vs. local environments).
+• Generate insights into application usage and employee focus.
+Statistics
+• Generate organizational performance overviews.
+• Provide individual and team-based performance statistics.
+• Track time management and task progress.
+• Enable the creation of custom reports.
+Backend Server Endpoints
+User Management Endpoints
+Method	Endpoint	Description
+POST	/api/users/register	Register a new user (admin).
+POST	/api/users/login	Authenticate a user and issue a JWT token.
+GET	/api/users/profile	Get the profile details of the logged-in user.
+PUT	/api/users/profile	Update user profile information.
+DELETE	/api/users/deactivate	Deactivate a user account.(admin-only)
+GET	/api/users/list	List all users (admin-only, with filters for roles/status).
+Activity Tracker Endpoints
+Method	Endpoint	Description
+POST	/api/activities/log	Log an employee activity (e.g., task completion, keystroke event).
+GET	/api/activities/today	Retrieve all activities logged by the current user for today.
+GET	/api/activities/summary	Get a summary of activities for the current user over a time period.
+GET	/api/activities/{userId}	Retrieve activities of a specific user (admin-only).
+DELETE	/api/activities/clear	Clear all activity logs for a user (admin-only).
+Analytical Tool Endpoints
+Method	Endpoint	Description
+GET	/api/analytics/productivity	Analyze productivity trends for a user or team.
+GET	/api/analytics/task-completion	Get task completion rates and time efficiency metrics.
+GET	/api/analytics/app-usage	Analyze application usage patterns for individual employees.
+GET	/api/analytics/keystrokes	Retrieve keystroke frequency and patterns for a specific time span.
+GET	/api/analytics/workspace	Compare productive workspace vs. local environment activities.
+Statistics Endpoints
+Method	Endpoint	Description
+GET	/api/stats/overview	Retrieve an overview of organization-wide statistics.
+GET	/api/stats/user/{userId}	Get performance statistics for a specific user.
+GET	/api/stats/team/{teamId}	Retrieve aggregated statistics for a team (admin-only).
+GET	/api/stats/time-tracking	Get time-tracking data (e.g., work hours) for employees.
+GET	/api/stats/task-progress	View statistics on task progress across the organization.
+GET	/api/stats/custom-report	Generate custom reports based on specified filters (admin-only).
+
+Frameworks / Libraries
+•	Spring Boot (Back-end Server Application)
+•	Flask (Front-end Server Application)
+•	Templates/mockup pages (HTML, CSS, JS)
+•	Maven (Type)
+Key Considerations
+• Data Privacy: Ensure compliance with data protection laws and employee consent requirements.
+• Security: Implement strong encryption and secure data storage to protect sensitive information.
+• Scalability: Design the system to support growing organizational needs.
+• Anti-Tampering Mechanisms: Use robust methods to prevent unauthorized software removal or bypassing.
+• User Roles and Permissions: Clearly define and enforce role-based access controls.
+• Reporting and Insights: Provide detailed and customizable reports for actionable insights.
+• Cross-Platform Compatibility: Ensure the system works seamlessly across various operating systems.
+• Ethical Considerations: Maintain transparency with employees regarding the tracking system's scope and purpose.

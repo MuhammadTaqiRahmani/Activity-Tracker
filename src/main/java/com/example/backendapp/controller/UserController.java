@@ -64,11 +64,31 @@ public class UserController {
     // Update user profile information
     @PutMapping("/profile")
     public ResponseEntity<User> updateProfile(@RequestHeader("Authorization") String token, @RequestBody User user) {
-        String username = jwtTokenProvider.getUsername(token.replace("Bearer ", ""));
-        return userService.findUserByUsername(username)
-                .flatMap(existingUser -> userService.updateUser(existingUser.getId(), user))
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        try {
+            String username = jwtTokenProvider.getUsername(token.replace("Bearer ", ""));
+            Optional<User> existingUser = userService.findUserByUsername(username);
+            
+            if (existingUser.isPresent()) {
+                User currentUser = existingUser.get();
+                
+                // Update only non-null fields
+                if (user.getEmail() != null) currentUser.setEmail(user.getEmail());
+                if (user.getUsername() != null) currentUser.setUsername(user.getUsername());
+                if (user.getPassword() != null) currentUser.setPassword(user.getPassword());
+                // Keep existing role and active status
+                currentUser.setRole(currentUser.getRole());
+                currentUser.setActive(currentUser.isActive());
+                
+                User updatedUser = userService.updateUser(currentUser.getId(), currentUser)
+                    .orElseThrow(() -> new RuntimeException("Failed to update user"));
+                
+                return ResponseEntity.ok(updatedUser);
+            }
+            
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     // Deactivate a user account (admin-only)

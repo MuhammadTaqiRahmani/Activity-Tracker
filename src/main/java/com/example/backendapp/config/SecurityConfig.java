@@ -40,10 +40,11 @@ public class SecurityConfig {
                 .requestMatchers("/api/users/register", "/api/users/login").permitAll()
                 .requestMatchers("/api/admin/init").permitAll() // Allow admin initialization
                 .requestMatchers("/api/test/**").permitAll() // Allow test endpoints
-                .requestMatchers("/api/process-tracking/**").hasAnyRole("ADMIN", "EMPLOYEE")  // Add this line
+                .requestMatchers("/api/logs/batch").hasAnyRole("ADMIN", "EMPLOYEE")  // Allow process logs
+                .requestMatchers("/api/activities/**").hasAnyRole("ADMIN", "EMPLOYEE")  // Allow activity endpoints
+                .requestMatchers("/api/process-tracking/**").hasAnyRole("ADMIN", "EMPLOYEE")
                 .requestMatchers("/api/security/**").hasAnyRole("ADMIN", "EMPLOYEE") // Added security endpoint protection
                 .requestMatchers("/api/analytics/**").hasAnyRole("ADMIN", "EMPLOYEE")
-                .requestMatchers("/api/activities/**").hasAnyRole("ADMIN", "EMPLOYEE")
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )

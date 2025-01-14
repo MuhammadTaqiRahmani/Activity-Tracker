@@ -9,6 +9,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.Collections;
 
 import java.util.List;
@@ -16,6 +18,8 @@ import java.util.Optional;
 
 @Service
 public class UserService implements UserDetailsService {
+
+    private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
     @Autowired
     private UserRepository userRepository;
@@ -51,13 +55,24 @@ public class UserService implements UserDetailsService {
 
     // Update user details
     public Optional<User> updateUser(Long id, User updatedUser) {
-        return userRepository.findById(id).map(user -> {
-            user.setUsername(updatedUser.getUsername());
-            user.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
-            user.setRole(updatedUser.getRole());
-            user.setActive(updatedUser.isActive());
-            return userRepository.save(user);
-        });
+        return userRepository.findById(id)
+            .map(existingUser -> {
+                // Update only if new values are provided
+                if (updatedUser.getUsername() != null) {
+                    existingUser.setUsername(updatedUser.getUsername());
+                }
+                if (updatedUser.getEmail() != null) {
+                    existingUser.setEmail(updatedUser.getEmail());
+                }
+                if (updatedUser.getPassword() != null) {
+                    existingUser.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
+                }
+                // Preserve role and active status
+                existingUser.setRole(existingUser.getRole());
+                existingUser.setActive(existingUser.isActive());
+                
+                return userRepository.save(existingUser);
+            });
     }
 
     // Change user password
@@ -107,11 +122,18 @@ public class UserService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        logger.debug("Loading user by username: {}", username);
+        
         User user = findUserByUsername(username)
-            .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
+            .orElseThrow(() -> {
+                logger.error("User not found with username: {}", username);
+                return new UsernameNotFoundException("User not found with username: " + username);
+            });
 
         // Ensure role has ROLE_ prefix
         String role = user.getRole().startsWith("ROLE_") ? user.getRole() : "ROLE_" + user.getRole();
+        
+        logger.debug("User found: {} with role: {}", username, role);
 
         return org.springframework.security.core.userdetails.User
             .withUsername(user.getUsername())

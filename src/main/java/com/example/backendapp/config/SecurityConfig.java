@@ -38,6 +38,7 @@ public class SecurityConfig {
             .and()
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/users/register", "/api/users/login").permitAll()
+                .requestMatchers("/api/admin/init").permitAll() // Allow admin initialization
                 .requestMatchers("/api/test/**").permitAll() // Allow test endpoints
                 .requestMatchers("/api/process-tracking/**").hasAnyRole("ADMIN", "EMPLOYEE")  // Add this line
                 .requestMatchers("/api/security/**").hasAnyRole("ADMIN", "EMPLOYEE") // Added security endpoint protection

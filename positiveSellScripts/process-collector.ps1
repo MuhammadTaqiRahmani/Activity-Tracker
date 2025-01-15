@@ -1,14 +1,14 @@
 # Configuration
 $baseUrl = "http://localhost:8081"  # Updated to match application.properties port
-$userId = 3  # Replace with actual user ID
+$userId = 13  # Replace with actual user ID
 $collectionInterval = 60  # Changed from 300 to 60 seconds (1 minute)
 $batchSize = 5  # Changed from 10 to 5 for more frequent sending
 
 # Function to get authentication token
 function Get-AuthToken {
     $loginBody = @{
-        username = "Taqi"
-        password = "123tiqi123.com"
+        username = "fifa"
+        password = "fifa@gmail.com"
     } | ConvertTo-Json
 
     $loginResponse = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/users/login" `

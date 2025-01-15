@@ -1,0 +1,72 @@
+{
+    "info": {
+        "name": "Process & Activity Tracking APIs",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "1. User Login",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": "http://localhost:8081/api/users/login",
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"username\": \"tracker_test\",\n    \"password\": \"Test123!\"\n}"
+                }
+            }
+        },
+        {
+            "name": "2. Log Process Batch",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}"
+                    },
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": "http://localhost:8081/api/logs/batch",
+                "body": {
+                    "mode": "raw",
+                    "raw": "[\n    {\n        \"userId\": {{userId}},\n        \"processName\": \"chrome\",\n        \"windowTitle\": \"Google Chrome\",\n        \"processId\": \"1234\",\n        \"applicationPath\": \"C:\\\\Program Files\\\\Google\\\\Chrome\\\\chrome.exe\",\n        \"startTime\": \"{{$isoTimestamp}}\",\n        \"endTime\": \"{{$isoTimestamp}}\",\n        \"durationSeconds\": 60,\n        \"category\": \"BROWSER\",\n        \"isProductiveApp\": true,\n        \"activityType\": \"PROCESS_MONITORING\",\n        \"description\": \"Browser activity\",\n        \"workspaceType\": \"LOCAL\",\n        \"applicationCategory\": \"BROWSER\"\n    }\n]"
+                }
+            }
+        },
+        {
+            "name": "3. Get Today's Activities",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}"
+                    }
+                ],
+                "url": "http://localhost:8081/api/activities/today"
+            }
+        },
+        {
+            "name": "4. Get Activity Summary",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}"
+                    }
+                ],
+                "url": "http://localhost:8081/api/activities/summary"
+            }
+        }
+    ]
+}

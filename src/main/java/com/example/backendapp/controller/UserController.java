@@ -10,6 +10,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
+import java.util.stream.Collectors;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/users")
@@ -140,5 +142,60 @@ public class UserController {
             return ResponseEntity.ok(Collections.singletonMap("message", "User deleted successfully"));
         }
         return ResponseEntity.status(404).body(Collections.singletonMap("error", "User not found"));
+    }
+
+    // Get all users with optional filters
+    @GetMapping("/all")
+    public ResponseEntity<Map<String, Object>> getAllUsers(
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) Boolean active) {
+        try {
+            List<User> users = userService.getAllUsers();
+            
+            // Apply filters if provided
+            if (role != null) {
+                users = users.stream()
+                    .filter(user -> user.getRole().equals(role))
+                    .collect(Collectors.toList());
+            }
+            if (active != null) {
+                users = users.stream()
+                    .filter(user -> user.isActive() == active)
+                    .collect(Collectors.toList());
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("users", users);
+            response.put("count", users.size());
+            response.put("timestamp", LocalDateTime.now());
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    // Get user by ID with detailed information
+    @GetMapping("/details/{id}")
+    public ResponseEntity<?> getUserDetails(@PathVariable Long id) {
+        try {
+            return userService.findById(id)
+                .map(user -> {
+                    Map<String, Object> details = new HashMap<>();
+                    details.put("id", user.getId());
+                    details.put("username", user.getUsername());
+                    details.put("email", user.getEmail());
+                    details.put("role", user.getRole());
+                    details.put("active", user.isActive());
+                    details.put("createdAt", user.getCreatedAt());
+                    return ResponseEntity.ok(details);
+                })
+                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Collections.singletonMap("error", "User not found")));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Collections.singletonMap("error", e.getMessage()));
+        }
     }
 }

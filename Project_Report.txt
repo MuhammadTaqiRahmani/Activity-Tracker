@@ -1,0 +1,232 @@
+ORGANIZATIONAL EMPLOYEE PRODUCTIVITY TRACKING SYSTEM
+Final Project Report
+
+1. PROJECT OVERVIEW
+===================
+The project implements a dual-server architecture system for monitoring employee activities and productivity:
+- Backend Server: Spring Boot REST APIs
+- Frontend Server: Flask web application
+- Database: Microsoft SQL Server
+
+2. IMPLEMENTED FEATURES
+======================
+
+2.1. Backend Server (Spring Boot)
+--------------------------------
+Framework & Libraries:
+- Spring Boot 3.4.1
+- Spring Security
+- Spring Data JPA
+- JWT Authentication
+- Microsoft SQL Server JDBC
+- Lombok
+- Maven
+
+Core Modules Implemented:
+
+a) User Management Module:
+- User registration and authentication ✓
+- JWT-based security ✓
+- Role-based access control (ADMIN, EMPLOYEE) ✓
+- Profile management ✓
+- User deactivation ✓
+
+b) Activity Tracking Module:
+- Process tracking ✓
+- Application usage monitoring ✓
+- Activity logging ✓
+- Daily summaries ✓
+- Anti-tampering mechanisms ✓
+
+c) Analytics Module:
+- Basic productivity analysis ✓
+- Application usage patterns ✓
+- Time tracking metrics ✓
+- Performance statistics ✓
+
+2.2. Frontend Server (Flask)
+---------------------------
+Framework & Libraries:
+- Flask
+- Requests
+- Flask-Session
+- Jinja2 Templates
+- Bootstrap
+- Chart.js
+
+Implemented Pages:
+- Dashboard
+- User Registration
+- Login
+- Profile Management
+- Activity Tables
+- Analytics Charts
+
+2.3. Database Schema
+-------------------
+Tables Implemented:
+1. users
+   - id, username, email, password, role, active
+
+2. activities
+   - id, user_id, activity_type, description
+   - process_name, window_title
+   - start_time, end_time, duration
+   - status, category
+
+3. process_tracks
+   - id, user_id, process_name
+   - start_time, duration_seconds
+   - category, is_productive_app
+
+3. SECURITY FEATURES
+===================
+Implemented:
+- JWT Authentication ✓
+- Role-based authorization ✓
+- Password encryption ✓
+- CORS configuration ✓
+- Anti-tampering checks ✓
+- Session management ✓
+
+4. API ENDPOINTS
+===============
+Implemented Endpoints:
+
+User Management:
+- POST /api/users/register
+- POST /api/users/login
+- GET /api/users/profile
+- PUT /api/users/profile
+- DELETE /api/users/deactivate
+- GET /api/users/list
+
+Activity Tracking:
+- POST /api/activities/log
+- GET /api/activities/today
+- GET /api/activities/summary
+- GET /api/activities/all
+- DELETE /api/activities/clear
+
+Analytics:
+- GET /api/activities/stats
+- GET /api/activities/application-usage
+- GET /api/activities/categories
+
+5. FEATURES NOT IMPLEMENTED
+==========================
+From Original Proposal:
+
+1. Keystroke Logging:
+- Detailed keystroke tracking
+- Keystroke pattern analysis
+- Input monitoring
+
+2. Advanced Analytics:
+- Team-based analytics
+- Organization-wide statistics
+- Advanced performance metrics
+- Custom report generation
+
+3. Task Management:
+- Task assignment
+- Progress tracking
+- Completion rates
+- Time estimation
+
+4. Advanced Monitoring:
+- Screen capture
+- Webcam monitoring
+- Audio monitoring
+- Network traffic analysis
+
+5. Team Features:
+- Team creation
+- Team management
+- Team statistics
+- Group performance metrics
+
+6. TECHNICAL LIMITATIONS
+=======================
+1. Limited Monitoring Depth:
+- No low-level system monitoring
+- No screen capture functionality
+- No network traffic analysis
+
+2. Analytics Limitations:
+- Basic productivity metrics only
+- Limited statistical analysis
+- No predictive analytics
+
+3. Reporting Limitations:
+- Basic report formats
+- Limited customization
+- No export options
+
+7. FUTURE ENHANCEMENTS
+=====================
+Priority Improvements:
+
+1. Monitoring Enhancements:
+- Add keystroke logging
+- Implement screen capture
+- Add network monitoring
+
+2. Analytics Improvements:
+- Team analytics
+- Advanced metrics
+- Custom reporting
+- Data visualization
+
+3. Feature Additions:
+- Task management
+- Team management
+- Mobile support
+- Real-time notifications
+
+4. Technical Improvements:
+- Caching system
+- Performance optimization
+- Advanced security
+- Scalability features
+
+8. CONCLUSION
+=============
+The implemented system provides core functionality for:
+- User management
+- Basic activity tracking
+- Simple analytics
+- Process monitoring
+
+While not implementing all proposed features, the system establishes a solid foundation for:
+- Employee monitoring
+- Activity tracking
+- Performance analysis
+- Productivity measurement
+
+The modular architecture allows for future enhancements and feature additions.
+
+9. DEPLOYMENT REQUIREMENTS
+=========================
+Backend Server:
+- Java 21
+- Maven 3.8+
+- SQL Server 2019+
+- 4GB RAM minimum
+- 10GB storage
+
+Frontend Server:
+- Python 3.8+
+- pip
+- 2GB RAM minimum
+- 5GB storage
+
+Database:
+- SQL Server 2019+
+- 10GB initial storage
+- Regular backup system
+
+Network:
+- Stable internet connection
+- Minimum 10Mbps bandwidth
+- Open ports: 8081 (Backend), 5000 (Frontend)

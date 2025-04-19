@@ -1,0 +1,13 @@
+name: process_monitor
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pyqt=6
+  - requests
+  - psutil
+  - pyjwt  # Changed from python-jwt to pyjwt which is available in conda
+  - pip
+  - pip:  # Additional pip packages if needed
+    - python-jwt  # Install via pip if conda version not sufficient

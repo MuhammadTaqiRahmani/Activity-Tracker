@@ -2,7 +2,8 @@
 $baseUrl = "http://localhost:8081"  # Updated to match application.properties port
 $userId = 20  # Replace with actual user ID
 $collectionInterval = 60  # Changed from 300 to 60 seconds (1 minute)
-$batchSize = 5  # Changed from 10 to 5 for more frequent sending
+$maxBatchSize = 3  # Reduced batch size
+$maxRetries = 3    # Number of retries for failed requests
 
 # Function to get authentication token
 function Get-AuthToken {
@@ -62,6 +63,59 @@ function Write-ProcessLog {
     Write-Host "----------------------------------------" -ForegroundColor Cyan
 }
 
+# New function to split array into chunks
+function Split-Array {
+    param([array]$array, [int]$chunkSize)
+    
+    for ($i = 0; $i -lt $array.Count; $i += $chunkSize) {
+        $end = [Math]::Min($i + $chunkSize - 1, $array.Count - 1)
+        , ($array[$i..$end])
+    }
+}
+
+# New function to send batch with retry logic
+function Send-ProcessBatch {
+    param (
+        [array]$batch,
+        [hashtable]$headers,
+        [int]$retryCount = 0
+    )
+    
+    try {
+        # Ensure batch is wrapped in array brackets
+        $jsonBody = if ($batch.Count -eq 1) {
+            "[$($batch | ConvertTo-Json)]"
+        } else {
+            $batch | ConvertTo-Json -Depth 10
+        }
+        
+        Write-Host "Sending JSON payload:" -ForegroundColor Gray
+        Write-Host $jsonBody -ForegroundColor Gray
+        
+        $response = Invoke-RestMethod -Method Post `
+            -Uri "$baseUrl/api/logs/batch" `
+            -Headers $headers `
+            -Body $jsonBody `
+            -ContentType "application/json"
+        
+        Write-Host "Successfully sent batch with $($batch.Count) logs" -ForegroundColor Green
+        return $true
+    }
+    catch {
+        if ($retryCount -lt $maxRetries) {
+            Write-Host "Retry attempt $($retryCount + 1) for batch..." -ForegroundColor Yellow
+            Start-Sleep -Seconds 2
+            return Send-ProcessBatch -batch $batch -headers $headers -retryCount ($retryCount + 1)
+        }
+        else {
+            Write-Host "Failed to send batch after $maxRetries attempts" -ForegroundColor Red
+            Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host "Response: $($_.Exception.Response.StatusCode) $($_.Exception.Response.StatusDescription)" -ForegroundColor Red
+            return $false
+        }
+    }
+}
+
 # Main collection loop
 try {
     $token = Get-AuthToken
@@ -70,45 +124,31 @@ try {
         "Content-Type" = "application/json"
     }
     
-    Write-Host "Starting high-frequency process collection..." -ForegroundColor Green
-    Write-Host "Collecting every $collectionInterval seconds with batch size of $batchSize" -ForegroundColor Yellow
+    Write-Host "Starting process collection..." -ForegroundColor Green
     
-    $batchNumber = 1
     while ($true) {
-        $processLogs = @()
-        
-        # Collect process data
-        Write-Host "`nBatch #$batchNumber - Collecting process data..." -ForegroundColor Magenta
         $processData = Get-ProcessData -userId $userId
         
-        # Print collected data
-        Write-Host "`nCollected Processes in this batch:" -ForegroundColor Cyan
-        foreach ($process in $processData) {
-            Write-ProcessLog -ProcessData $process
-            $processLogs += $process
-        }
+        # Split processes into smaller batches
+        $batches = Split-Array -array $processData -chunkSize $maxBatchSize
         
-        # Send batch when we reach batch size
-        if ($processLogs.Count -ge $batchSize) {
-            try {
-                Write-Host "`nSending batch to server..." -ForegroundColor Yellow
-                $response = Invoke-RestMethod -Method Post `
-                    -Uri "$baseUrl/api/logs/batch" `
-                    -Headers $headers `
-                    -Body ($processLogs | ConvertTo-Json) `
-                    -ContentType "application/json"
-                
-                Write-Host "Successfully sent batch #$batchNumber with $($processLogs.Count) logs" -ForegroundColor Green
-                Write-Host "Server response: " -NoNewline
-                $response | ConvertTo-Json | Write-Host -ForegroundColor Cyan
-                
-                $processLogs = @()
-                $batchNumber++
+        Write-Host "`nCollected $($processData.Count) processes, split into $($batches.Count) batches" -ForegroundColor Cyan
+        
+        $batchNumber = 1
+        foreach ($batch in $batches) {
+            Write-Host "`nProcessing batch $batchNumber of $($batches.Count)" -ForegroundColor Yellow
+            
+            foreach ($process in $batch) {
+                Write-ProcessLog -ProcessData $process
             }
-            catch {
-                Write-Host "Error sending batch #$batchNumber" -ForegroundColor Red
-                Write-Host "Error details: $($_.Exception.Message)" -ForegroundColor Red
+            
+            $success = Send-ProcessBatch -batch $batch -headers $headers
+            if (-not $success) {
+                Write-Host "Skipping remaining items in current batch..." -ForegroundColor Yellow
+                continue
             }
+            
+            $batchNumber++
         }
         
         Write-Host "`nWaiting $collectionInterval seconds before next collection..." -ForegroundColor Gray

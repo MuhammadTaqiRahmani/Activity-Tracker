@@ -35,34 +35,40 @@ public class LogCollectorController {
             List<Activity> activities = new ArrayList<>();
 
             for (Map<String, Object> log : logs) {
-                // Create ProcessTrack
+                // Validate required fields
+                if (!isValidLogEntry(log)) {
+                    System.err.println("Invalid log entry: " + log);
+                    continue;
+                }
+
+                // Create ProcessTrack with safe get methods
                 ProcessTrack processTrack = new ProcessTrack();
-                processTrack.setUserId(Long.valueOf(log.get("userId").toString()));
-                processTrack.setProcessName(log.get("processName").toString());
-                processTrack.setWindowTitle(log.get("windowTitle").toString());
-                processTrack.setProcessId(log.get("processId").toString());
-                processTrack.setApplicationPath(log.get("applicationPath").toString());
-                processTrack.setStartTime(LocalDateTime.parse(log.get("startTime").toString()));
-                processTrack.setEndTime(LocalDateTime.parse(log.get("endTime").toString()));
-                processTrack.setDurationSeconds(Long.valueOf(log.get("durationSeconds").toString()));
-                processTrack.setCategory(log.get("category").toString());
-                processTrack.setIsProductiveApp(Boolean.valueOf(log.get("isProductiveApp").toString()));
+                processTrack.setUserId(getLongValue(log, "userId"));
+                processTrack.setProcessName(getStringValue(log, "processName"));
+                processTrack.setWindowTitle(getStringValue(log, "windowTitle"));
+                processTrack.setProcessId(getStringValue(log, "processId"));
+                processTrack.setApplicationPath(getStringValue(log, "applicationPath", ""));
+                processTrack.setStartTime(getDateTimeValue(log, "startTime"));
+                processTrack.setEndTime(getDateTimeValue(log, "endTime"));
+                processTrack.setDurationSeconds(getLongValue(log, "durationSeconds"));
+                processTrack.setCategory(getStringValue(log, "category", "OTHER"));
+                processTrack.setIsProductiveApp(getBooleanValue(log, "isProductiveApp", true));
                 processTracks.add(processTrack);
 
-                // Create Activity with all required fields
+                // Create Activity
                 Activity activity = new Activity();
-                activity.setUserId(Long.valueOf(log.get("userId").toString()));
-                activity.setActivityType(log.get("activityType").toString());
-                activity.setDescription(log.get("description").toString());
-                activity.setProcessName(log.get("processName").toString());
-                activity.setWindowTitle(log.get("windowTitle").toString());
-                activity.setApplicationName(log.get("processName").toString());
-                activity.setWorkspaceType(log.get("workspaceType").toString());
-                activity.setApplicationCategory(log.get("applicationCategory").toString());
-                activity.setProcessId(log.get("processId").toString());
-                activity.setDurationSeconds(Long.valueOf(log.get("durationSeconds").toString()));
-                activity.setStartTime(LocalDateTime.parse(log.get("startTime").toString()));
-                activity.setEndTime(LocalDateTime.parse(log.get("endTime").toString()));
+                activity.setUserId(getLongValue(log, "userId"));
+                activity.setActivityType(getStringValue(log, "activityType", "PROCESS_MONITORING"));
+                activity.setDescription(getStringValue(log, "description", "Process monitoring: " + processTrack.getProcessName()));
+                activity.setProcessName(getStringValue(log, "processName"));
+                activity.setWindowTitle(getStringValue(log, "windowTitle"));
+                activity.setApplicationName(getStringValue(log, "processName"));
+                activity.setWorkspaceType(getStringValue(log, "workspaceType", "LOCAL"));
+                activity.setApplicationCategory(getStringValue(log, "applicationCategory", "SYSTEM"));
+                activity.setProcessId(getStringValue(log, "processId"));
+                activity.setDurationSeconds(getLongValue(log, "durationSeconds"));
+                activity.setStartTime(getDateTimeValue(log, "startTime"));
+                activity.setEndTime(getDateTimeValue(log, "endTime"));
                 
                 System.out.println("\nCreated Activity:");
                 System.out.println("UserId: " + activity.getUserId());
@@ -72,7 +78,7 @@ public class LogCollectorController {
                 activities.add(activity);
             }
 
-            // Save both
+            // Process valid entries
             processTracks.forEach(processTrackingService::logProcess);
             activities.forEach(logCollectorService::queueActivityLog);
 
@@ -89,5 +95,41 @@ public class LogCollectorController {
                 "stackTrace", e.getStackTrace()
             ));
         }
+    }
+
+    // Add helper methods
+    private boolean isValidLogEntry(Map<String, Object> log) {
+        return log.containsKey("userId") && 
+               log.containsKey("processName") && 
+               log.containsKey("processId") && 
+               log.containsKey("startTime") &&
+               log.containsKey("endTime") &&
+               log.containsKey("durationSeconds");
+    }
+
+    private String getStringValue(Map<String, Object> map, String key, String defaultValue) {
+        Object value = map.get(key);
+        return value != null ? value.toString() : defaultValue;
+    }
+
+    private String getStringValue(Map<String, Object> map, String key) {
+        return getStringValue(map, key, "");
+    }
+
+    private Long getLongValue(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        if (value == null) return 0L;
+        return value instanceof Number ? ((Number) value).longValue() : Long.parseLong(value.toString());
+    }
+
+    private Boolean getBooleanValue(Map<String, Object> map, String key, Boolean defaultValue) {
+        Object value = map.get(key);
+        if (value == null) return defaultValue;
+        return value instanceof Boolean ? (Boolean) value : Boolean.parseBoolean(value.toString());
+    }
+
+    private LocalDateTime getDateTimeValue(Map<String, Object> map, String key) {
+        String value = getStringValue(map, key);
+        return value.isEmpty() ? LocalDateTime.now() : LocalDateTime.parse(value);
     }
 }

@@ -1,19 +1,70 @@
 # Configuration
 $baseUrl = "http://localhost:8081"  # Updated to match application.properties port
-$userId = 3  # Replace with actual user ID
+$userId = 20  # Replace with actual user ID
 $collectionInterval = 60  # Changed from 300 to 60 seconds (1 minute)
-$batchSize = 5  # Changed from 10 to 5 for more frequent sending
+$maxBatchSize = 3  # Reduced batch size
+$maxRetries = 3    # Number of retries for failed requests
 
-# Function to get authentication token
+# Token management variables
+$tokenRefreshInterval = 300  # Reduce to 5 minutes
+$lastTokenRefresh = $null
+$token = $null
+$tokenValidated = $false
+
+# Modified Get-AuthToken function
 function Get-AuthToken {
-    $loginBody = @{
-        username = "Naqi111"
-        password = "123niqi123111.com"
-    } | ConvertTo-Json
+    try {
+        $loginBody = @{
+            username = "Naqi111"
+            password = "123niqi123111.com"
+        } | ConvertTo-Json
 
-    $loginResponse = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/users/login" `
-        -Body $loginBody -ContentType "application/json"
-    return $loginResponse.token
+        Write-Host "Attempting authentication..." -ForegroundColor Yellow
+        $loginResponse = Invoke-RestMethod -Method Post `
+            -Uri "$baseUrl/api/users/login" `
+            -Body $loginBody `
+            -ContentType "application/json"
+        
+        if ($loginResponse.token) {
+            $script:tokenValidated = $true
+            Write-Host "Authentication successful" -ForegroundColor Green
+            return $loginResponse.token
+        } else {
+            throw "No token received in response"
+        }
+    }
+    catch {
+        Write-Host "Authentication failed: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "Status Code: $($_.Exception.Response.StatusCode)" -ForegroundColor Red
+        $script:tokenValidated = $false
+        throw
+    }
+}
+
+# Modified token validation function
+function Ensure-ValidToken {
+    param([bool]$forceRefresh = $false)
+    
+    $currentTime = Get-Date
+    $needsRefresh = $false
+
+    if (-not $script:lastTokenRefresh) {
+        $needsRefresh = $true
+    } else {
+        $timeSinceRefresh = ($currentTime - $script:lastTokenRefresh).TotalSeconds
+        $needsRefresh = $timeSinceRefresh -ge $tokenRefreshInterval
+    }
+    
+    if ($forceRefresh -or $needsRefresh -or -not $script:tokenValidated) {
+        Write-Host "Token needs refresh. Force: $forceRefresh, Time elapsed: $timeSinceRefresh" -ForegroundColor Yellow
+        $script:token = Get-AuthToken
+        $script:lastTokenRefresh = $currentTime
+        $script:headers = @{
+            "Authorization" = "Bearer $($script:token)"
+            "Content-Type" = "application/json"
+        }
+        Write-Host "Token refreshed and headers updated" -ForegroundColor Green
+    }
 }
 
 # Function to collect process data
@@ -62,53 +113,99 @@ function Write-ProcessLog {
     Write-Host "----------------------------------------" -ForegroundColor Cyan
 }
 
-# Main collection loop
-try {
-    $token = Get-AuthToken
-    $headers = @{
-        "Authorization" = "Bearer $token"
-        "Content-Type" = "application/json"
+# New function to split array into chunks
+function Split-Array {
+    param([array]$array, [int]$chunkSize)
+    
+    for ($i = 0; $i -lt $array.Count; $i += $chunkSize) {
+        $end = [Math]::Min($i + $chunkSize - 1, $array.Count - 1)
+        , ($array[$i..$end])
     }
+}
+
+# Modified Send-ProcessBatch function
+function Send-ProcessBatch {
+    param (
+        [array]$batch,
+        [hashtable]$headers,
+        [int]$retryCount = 0
+    )
     
-    Write-Host "Starting high-frequency process collection..." -ForegroundColor Green
-    Write-Host "Collecting every $collectionInterval seconds with batch size of $batchSize" -ForegroundColor Yellow
-    
-    $batchNumber = 1
-    while ($true) {
-        $processLogs = @()
-        
-        # Collect process data
-        Write-Host "`nBatch #$batchNumber - Collecting process data..." -ForegroundColor Magenta
-        $processData = Get-ProcessData -userId $userId
-        
-        # Print collected data
-        Write-Host "`nCollected Processes in this batch:" -ForegroundColor Cyan
-        foreach ($process in $processData) {
-            Write-ProcessLog -ProcessData $process
-            $processLogs += $process
+    try {
+        Ensure-ValidToken
+
+        # Wrap single item in array
+        $jsonBody = if ($batch.Count -eq 1) {
+            "[$($batch | ConvertTo-Json -Depth 10)]"
+        } else {
+            $batch | ConvertTo-Json -Depth 10
         }
         
-        # Send batch when we reach batch size
-        if ($processLogs.Count -ge $batchSize) {
-            try {
-                Write-Host "`nSending batch to server..." -ForegroundColor Yellow
-                $response = Invoke-RestMethod -Method Post `
-                    -Uri "$baseUrl/api/logs/batch" `
-                    -Headers $headers `
-                    -Body ($processLogs | ConvertTo-Json) `
-                    -ContentType "application/json"
-                
-                Write-Host "Successfully sent batch #$batchNumber with $($processLogs.Count) logs" -ForegroundColor Green
-                Write-Host "Server response: " -NoNewline
-                $response | ConvertTo-Json | Write-Host -ForegroundColor Cyan
-                
-                $processLogs = @()
-                $batchNumber++
+        Write-Host "Sending batch with current token..." -ForegroundColor Gray
+        
+        $response = Invoke-RestMethod -Method Post `
+            -Uri "$baseUrl/api/logs/batch" `
+            -Headers $script:headers `
+            -Body $jsonBody `
+            -ContentType "application/json"
+        
+        Write-Host "Successfully sent batch with $($batch.Count) logs" -ForegroundColor Green
+        return $true
+    }
+    catch {
+        $statusCode = $_.Exception.Response.StatusCode.value__
+        
+        if ($statusCode -eq 403) {
+            if ($retryCount -lt $maxRetries) {
+                Write-Host "Token rejected (403), forcing refresh..." -ForegroundColor Yellow
+                $script:tokenValidated = $false
+                Ensure-ValidToken -forceRefresh $true
+                return Send-ProcessBatch -batch $batch -headers $script:headers -retryCount ($retryCount + 1)
             }
-            catch {
-                Write-Host "Error sending batch #$batchNumber" -ForegroundColor Red
-                Write-Host "Error details: $($_.Exception.Message)" -ForegroundColor Red
+        }
+        elseif ($retryCount -lt $maxRetries) {
+            Write-Host "Retry attempt $($retryCount + 1) for batch..." -ForegroundColor Yellow
+            Start-Sleep -Seconds (2 * ($retryCount + 1))  # Exponential backoff
+            return Send-ProcessBatch -batch $batch -headers $script:headers -retryCount ($retryCount + 1)
+        }
+
+        Write-Host "Failed to send batch after $maxRetries attempts" -ForegroundColor Red
+        Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "Status Code: $statusCode" -ForegroundColor Red
+        return $false
+    }
+}
+
+# Main collection loop
+try {
+    # Initial setup
+    Ensure-ValidToken
+    
+    Write-Host "Starting process collection..." -ForegroundColor Green
+    
+    while ($true) {
+        $processData = Get-ProcessData -userId $userId
+        
+        # Split processes into smaller batches
+        $batches = Split-Array -array $processData -chunkSize $maxBatchSize
+        
+        Write-Host "`nCollected $($processData.Count) processes, split into $($batches.Count) batches" -ForegroundColor Cyan
+        
+        $batchNumber = 1
+        foreach ($batch in $batches) {
+            Write-Host "`nProcessing batch $batchNumber of $($batches.Count)" -ForegroundColor Yellow
+            
+            foreach ($process in $batch) {
+                Write-ProcessLog -ProcessData $process
             }
+            
+            $success = Send-ProcessBatch -batch $batch -headers $headers
+            if (-not $success) {
+                Write-Host "Skipping remaining items in current batch..." -ForegroundColor Yellow
+                continue
+            }
+            
+            $batchNumber++
         }
         
         Write-Host "`nWaiting $collectionInterval seconds before next collection..." -ForegroundColor Gray
@@ -118,6 +215,10 @@ try {
 catch {
     Write-Host "Error in collection process" -ForegroundColor Red
     Write-Host "Error details: $($_.Exception.Message)" -ForegroundColor Red
+    
+    if ($_.Exception.Response.StatusCode.value__ -eq 403) {
+        Write-Host "Authentication error - please verify credentials" -ForegroundColor Red
+    }
 }
 finally {
     Write-Host "Collection process ended" -ForegroundColor Yellow

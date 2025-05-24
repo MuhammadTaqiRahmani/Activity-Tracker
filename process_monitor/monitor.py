@@ -4,16 +4,23 @@ from datetime import datetime, timedelta
 
 class ProcessMonitor:
     def __init__(self):
-        self.user_id = 20  # Default user ID
+        self.user_id = None  # Initialize as None, will be set after login
         self.process_count = 0
         self.categories = self.initialize_categories()
         
     def set_user_id(self, user_id):
         """Set the user ID for process monitoring"""
+        if user_id is None:
+            raise ValueError("User ID cannot be None")
+        
         self.user_id = user_id
+        print(f"Process monitor user ID set to: {self.user_id}")
         
     def get_active_processes(self):
         """Get a list of active processes with window titles"""
+        if self.user_id is None:
+            raise ValueError("User ID is not set. Please log in first.")
+            
         processes = []
         for proc in psutil.process_iter(['pid', 'name', 'exe']):
             try:
@@ -74,6 +81,9 @@ class ProcessMonitor:
         
     def prepare_batch(self, processes):
         """Convert process information to the format expected by the server"""
+        if self.user_id is None:
+            raise ValueError("User ID is not set. Please log in first.")
+            
         current_time = datetime.now()
         
         batch = []

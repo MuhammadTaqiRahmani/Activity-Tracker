@@ -3,7 +3,8 @@ import traceback
 from datetime import datetime
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                             QPushButton, QTextEdit, QLabel, QSpinBox, QStatusBar, 
-                            QComboBox, QGroupBox, QProgressBar, QMessageBox)
+                            QComboBox, QGroupBox, QProgressBar, QMessageBox, QDialog,
+                            QLineEdit, QFormLayout, QDialogButtonBox)
 from PyQt6.QtCore import QTimer, Qt, pyqtSlot
 from PyQt6.QtGui import QColor, QTextCursor, QFont, QIcon
 from monitor import ProcessMonitor
@@ -20,6 +21,48 @@ def check_qt_installation():
         print("\nTry running setup.bat to fix dependencies")
         return False
 
+class LoginDialog(QDialog):
+    """Login dialog for user authentication"""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Login")
+        self.setMinimumWidth(300)
+        
+        # Create form layout
+        layout = QFormLayout(self)
+        
+        # Create widgets
+        self.server_input = QComboBox()
+        self.server_input.addItem("http://localhost:8081")
+        self.server_input.setEditable(True)
+        
+        self.username_input = QLineEdit()
+        self.username_input.setPlaceholderText("Enter your username")
+        self.username_input.setText("Naqi111")  # Default for testing
+        
+        self.password_input = QLineEdit()
+        self.password_input.setPlaceholderText("Enter your password")
+        self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self.password_input.setText("123niqi123111.com")  # Default for testing
+        
+        # Add widgets to form
+        layout.addRow("Server:", self.server_input)
+        layout.addRow("Username:", self.username_input)
+        layout.addRow("Password:", self.password_input)
+        
+        # Add buttons
+        self.button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | 
+                                          QDialogButtonBox.StandardButton.Cancel)
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+        layout.addRow(self.button_box)
+
+    def get_credentials(self):
+        """Return the server URL, username and password"""
+        return (self.server_input.currentText(),
+                self.username_input.text(), 
+                self.password_input.text())
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -28,7 +71,7 @@ class MainWindow(QMainWindow):
         
         # Initialize components
         self.process_monitor = ProcessMonitor()
-        self.api_client = ApiClient("http://localhost:8081")
+        self.api_client = ApiClient("http://localhost:8081") # This will be overridden in login
         self.max_batch_size = 3
         self.setup_ui()
         
@@ -42,6 +85,9 @@ class MainWindow(QMainWindow):
         
         # Initialize status
         self.update_connection_status("Not connected")
+        
+        # Show login dialog at startup
+        QTimer.singleShot(100, self.show_login_dialog)
         
     def setup_ui(self):
         central_widget = QWidget()
@@ -63,12 +109,11 @@ class MainWindow(QMainWindow):
         
         # User settings
         user_layout = QVBoxLayout()
-        user_label = QLabel("User ID:")
-        self.user_spin = QSpinBox()
-        self.user_spin.setRange(1, 999)
-        self.user_spin.setValue(20)
+        user_label = QLabel("Logged in as:")
+        self.user_label = QLabel("Not logged in")
+        self.user_label.setStyleSheet("font-weight: bold; color: gray;")
         user_layout.addWidget(user_label)
-        user_layout.addWidget(self.user_spin)
+        user_layout.addWidget(self.user_label)
         
         # Collection settings
         interval_layout = QVBoxLayout()
@@ -101,10 +146,10 @@ class MainWindow(QMainWindow):
         control_group = QGroupBox("Control")
         control_layout = QHBoxLayout()
         
-        # Connect button
-        self.connect_button = QPushButton("Connect to Server")
-        self.connect_button.clicked.connect(self.connect_to_server)
-        control_layout.addWidget(self.connect_button)
+        # Login/Logout button
+        self.login_button = QPushButton("Login")
+        self.login_button.clicked.connect(self.show_login_dialog)
+        control_layout.addWidget(self.login_button)
         
         # Start/Stop buttons
         self.start_button = QPushButton("Start Monitoring")
@@ -171,44 +216,71 @@ class MainWindow(QMainWindow):
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
         self.status_bar.showMessage("Ready")
-        
-    def connect_to_server(self):
-        """Attempt to connect to the server"""
-        server_url = self.server_combo.currentText()
-        self.api_client = ApiClient(server_url)
-        
-        self.status_bar.showMessage("Connecting to server...")
-        self.log_message(f"Connecting to {server_url}...")
-        
-        # Disable UI during connection attempt
-        self.connect_button.setEnabled(False)
-        self.connect_button.setText("Connecting...")
-        
-        # Try to connect and authenticate
-        success = self.api_client.login("Naqi111", "123niqi123111.com")
-        
-        if success:
-            self.update_connection_status("Connected")
-            self.connect_button.setText("Reconnect")
-            self.connect_button.setEnabled(True)
-            self.start_button.setEnabled(True)
-            self.log_message(f"Successfully connected to {server_url}")
-            self.status_bar.showMessage("Connected to server")
-        else:
-            self.update_connection_status("Failed")
-            self.connect_button.setText("Connect to Server")
-            self.connect_button.setEnabled(True)
-            self.start_button.setEnabled(False)
-            self.log_message(f"Failed to connect to {server_url}", error=True)
-            self.status_bar.showMessage("Connection failed")
+    
+    def show_login_dialog(self):
+        """Show login dialog and handle authentication"""
+        dialog = LoginDialog(self)
+        if dialog.exec():
+            server, username, password = dialog.get_credentials()
+            self.server_combo.setCurrentText(server)
             
-            # Show error message
-            QMessageBox.warning(
-                self,
-                "Connection Failed",
-                "Could not connect to the server. Make sure the server is running and the URL is correct.",
-                QMessageBox.StandardButton.Ok
-            )
+            # Update server URL in API client
+            self.api_client = ApiClient(server)
+            
+            # Attempt login
+            self.log_message(f"Attempting to login as {username}...")
+            self.status_bar.showMessage("Logging in...")
+            
+            success = self.api_client.login(username, password)
+            if success:
+                self.update_connection_status("Connected")
+                self.login_button.setText("Logout")
+                self.login_button.clicked.disconnect()
+                self.login_button.clicked.connect(self.logout_user)
+                self.start_button.setEnabled(True)
+                
+                # Update UI with user info
+                self.user_label.setText(f"{username} (ID: {self.api_client.get_user_id()})")
+                self.user_label.setStyleSheet("font-weight: bold; color: green;")
+                
+                self.log_message(f"Successfully logged in as {username}")
+                self.status_bar.showMessage("Login successful")
+            else:
+                # Login failed
+                self.update_connection_status("Failed")
+                self.log_message("Login failed. Check credentials.", error=True)
+                self.status_bar.showMessage("Login failed")
+                
+                # Show error message
+                QMessageBox.warning(
+                    self,
+                    "Login Failed",
+                    "Could not log in. Please check your credentials and try again.",
+                    QMessageBox.StandardButton.Ok
+                )
+    
+    def logout_user(self):
+        """Log out the current user"""
+        if self.collection_timer.isActive():
+            # Stop monitoring first
+            self.stop_monitoring()
+            
+        # Logout in API client
+        if self.api_client.logout():
+            self.update_connection_status("Not connected")
+            self.login_button.setText("Login")
+            self.login_button.clicked.disconnect()
+            self.login_button.clicked.connect(self.show_login_dialog)
+            self.start_button.setEnabled(False)
+            
+            # Update UI
+            self.user_label.setText("Not logged in")
+            self.user_label.setStyleSheet("font-weight: bold; color: gray;")
+            
+            self.log_message("Logged out successfully")
+            self.status_bar.showMessage("Logged out")
+        else:
+            self.log_message("Failed to log out", error=True)
     
     def check_connection(self):
         """Periodically check connection status"""
@@ -231,17 +303,24 @@ class MainWindow(QMainWindow):
             if not self.api_client.token_validated:
                 success = self.api_client.ensure_valid_token()
                 if not success:
-                    self.log_message("Authentication failed. Please reconnect.", error=True)
+                    self.log_message("Not authenticated. Please log in.", error=True)
+                    self.show_login_dialog()
                     return
                 
-            self.process_monitor.set_user_id(self.user_spin.value())
+            # Set the user ID from the logged in user
+            user_id = self.api_client.get_user_id()
+            if not user_id:
+                self.log_message("No user ID available. Please log in again.", error=True)
+                return
+                
+            self.process_monitor.set_user_id(int(user_id))
             interval = self.interval_spin.value() * 1000  # Convert to milliseconds
             self.collection_timer.start(interval)
             
             self.start_button.setEnabled(False)
             self.stop_button.setEnabled(True)
             self.interval_spin.setEnabled(False)
-            self.user_spin.setEnabled(False)
+            self.login_button.setEnabled(False)  # Disable logout during monitoring
             
             self.monitor_status.setText("Running")
             self.monitor_status.setStyleSheet("font-weight: bold; color: green;")
@@ -258,7 +337,7 @@ class MainWindow(QMainWindow):
         self.start_button.setEnabled(True)
         self.stop_button.setEnabled(False)
         self.interval_spin.setEnabled(True)
-        self.user_spin.setEnabled(True)
+        self.login_button.setEnabled(True)  # Re-enable logout
         
         self.monitor_status.setText("Stopped")
         self.monitor_status.setStyleSheet("font-weight: bold; color: gray;")
@@ -314,6 +393,25 @@ class MainWindow(QMainWindow):
         self.log_output.verticalScrollBar().setValue(
             self.log_output.verticalScrollBar().maximum()
         )
+        
+    def closeEvent(self, event):
+        """Handle window close event"""
+        if self.collection_timer.isActive():
+            reply = QMessageBox.question(
+                self, 
+                'Confirm Exit',
+                'Monitoring is still running. Do you want to stop and exit?',
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, 
+                QMessageBox.StandardButton.No
+            )
+            
+            if reply == QMessageBox.StandardButton.Yes:
+                self.stop_monitoring()
+                event.accept()
+            else:
+                event.ignore()
+        else:
+            event.accept()
 
 def main():
     if not check_qt_installation():

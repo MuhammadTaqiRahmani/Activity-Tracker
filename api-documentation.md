@@ -9,6 +9,27 @@ All protected endpoints require a JWT token in the Authorization header:
 Authorization: Bearer <your-jwt-token>
 ```
 
+## Roles and Permissions
+
+The system supports three user roles with different permission levels:
+
+1. **SUPERADMIN**
+   - Can manage all users (including admins)
+   - Has full access to all system settings
+   - Can access all analytics and activities data
+   - Can manage system configuration
+
+2. **ADMIN**
+   - Can manage regular employees
+   - Can access analytics across all users
+   - Can view all activities
+   - Cannot modify system settings or manage other admins
+
+3. **EMPLOYEE**
+   - Can only access their own profile and activity data
+   - Can submit process tracking information
+   - Cannot access admin features or other users' data
+
 ## User Management Endpoints
 
 ### 1. Register User
@@ -21,7 +42,7 @@ Authorization: Bearer <your-jwt-token>
     "username": "string",
     "email": "string",
     "password": "string",
-    "role": "EMPLOYEE"
+    "role": "EMPLOYEE | ADMIN | SUPERADMIN"
 }
 ```
 - **Success Response**: 200 OK
@@ -49,9 +70,20 @@ Authorization: Bearer <your-jwt-token>
 - **Success Response**: 200 OK
 ```json
 {
-    "token": "string",
-    "userId": "string",
-    "role": "string"
+    "token": "jwt-token-string",
+    "userId": "number",
+    "username": "string",
+    "email": "string",
+    "role": "EMPLOYEE | ADMIN | SUPERADMIN",
+    "permissions": {
+        "canTrackProcesses": "boolean",
+        "canViewOwnStats": "boolean",
+        "canViewAllUsers": "boolean",
+        "canViewAllActivities": "boolean", 
+        "canManageUsers": "boolean",
+        "canManageAdmins": "boolean",
+        "canAccessSystemSettings": "boolean"
+    }
 }
 ```
 
@@ -210,3 +242,4 @@ All endpoints may return the following error responses:
 {
     "error": "Internal server error message"
 }
+```

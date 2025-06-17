@@ -9,17 +9,24 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.util.Collections;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 @Service
 public class UserService implements UserDetailsService {
 
-    private static final Logger logger = LoggerFactory.getLogger(UserService.class);
+    // Predefined roles for the application
+    public static final String ROLE_SUPERADMIN = "ROLE_SUPERADMIN";
+    public static final String ROLE_ADMIN = "ROLE_ADMIN";
+    public static final String ROLE_EMPLOYEE = "ROLE_EMPLOYEE";
+    private static final Set<String> VALID_ROLES = new HashSet<>(Arrays.asList(
+        ROLE_SUPERADMIN, ROLE_ADMIN, ROLE_EMPLOYEE
+    ));
 
     @Autowired
     private UserRepository userRepository;
@@ -29,13 +36,35 @@ public class UserService implements UserDetailsService {
 
     // Register a new user
     public User registerUser(User user) {
-        // Add ROLE_ prefix if not present
-        if (!user.getRole().startsWith("ROLE_")) {
-            user.setRole("ROLE_" + user.getRole());
+        // Format and validate role
+        String formattedRole = formatRole(user.getRole());
+        
+        if (!VALID_ROLES.contains(formattedRole)) {
+            throw new RuntimeException("Invalid role: " + user.getRole() + 
+                                    ". Valid roles are: SUPERADMIN, ADMIN, EMPLOYEE");
         }
+        
+        user.setRole(formattedRole);
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setActive(true);
         return userRepository.save(user);
+    }
+    
+    // Format role to ensure ROLE_ prefix
+    public String formatRole(String role) {
+        if (role == null) {
+            return ROLE_EMPLOYEE; // Default role
+        }
+        
+        // Remove ROLE_ prefix if it exists
+        String normalizedRole = role.startsWith("ROLE_") ? 
+                                role.substring(5) : role;
+                                
+        // Convert to uppercase
+        normalizedRole = normalizedRole.toUpperCase();
+        
+        // Add ROLE_ prefix
+        return "ROLE_" + normalizedRole;
     }
 
     // Find a user by username
@@ -55,24 +84,24 @@ public class UserService implements UserDetailsService {
 
     // Update user details
     public Optional<User> updateUser(Long id, User updatedUser) {
-        return userRepository.findById(id)
-            .map(existingUser -> {
-                // Update only if new values are provided
-                if (updatedUser.getUsername() != null) {
-                    existingUser.setUsername(updatedUser.getUsername());
+        return userRepository.findById(id).map(user -> {
+            user.setUsername(updatedUser.getUsername());
+            
+            if (updatedUser.getPassword() != null && !updatedUser.getPassword().isEmpty()) {
+                user.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
+            }
+            
+            if (updatedUser.getRole() != null && !updatedUser.getRole().isEmpty()) {
+                String formattedRole = formatRole(updatedUser.getRole());
+                if (!VALID_ROLES.contains(formattedRole)) {
+                    throw new RuntimeException("Invalid role: " + updatedUser.getRole());
                 }
-                if (updatedUser.getEmail() != null) {
-                    existingUser.setEmail(updatedUser.getEmail());
-                }
-                if (updatedUser.getPassword() != null) {
-                    existingUser.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
-                }
-                // Preserve role and active status
-                existingUser.setRole(existingUser.getRole());
-                existingUser.setActive(existingUser.isActive());
-                
-                return userRepository.save(existingUser);
-            });
+                user.setRole(formattedRole);
+            }
+            
+            user.setActive(updatedUser.isActive());
+            return userRepository.save(user);
+        });
     }
 
     // Change user password
@@ -107,7 +136,7 @@ public class UserService implements UserDetailsService {
             .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
     }
 
-    // Add this new method
+    // Add deactivateUser method
     public boolean deactivateUser(Long id) {
         return userRepository.findById(id).map(user -> {
             user.setActive(false);
@@ -122,18 +151,11 @@ public class UserService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        logger.debug("Loading user by username: {}", username);
-        
         User user = findUserByUsername(username)
-            .orElseThrow(() -> {
-                logger.error("User not found with username: {}", username);
-                return new UsernameNotFoundException("User not found with username: " + username);
-            });
+            .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
 
         // Ensure role has ROLE_ prefix
-        String role = user.getRole().startsWith("ROLE_") ? user.getRole() : "ROLE_" + user.getRole();
-        
-        logger.debug("User found: {} with role: {}", username, role);
+        String role = formatRole(user.getRole());
 
         return org.springframework.security.core.userdetails.User
             .withUsername(user.getUsername())

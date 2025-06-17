@@ -13,8 +13,9 @@ class ApiClient:
         self.token_validated = False
         self.server_status = "Not connected"
         self.username = None
-        self.user_id = None  # Store user_id when authenticated
-        self.role = None     # Store user role when authenticated
+        self.user_id = None      # Store user_id when authenticated
+        self.role = None         # Store user role when authenticated
+        self.permissions = {}    # Store user permissions when authenticated
         
     def ensure_valid_token(self, force_refresh=False):
         """Check if token needs refreshing and refresh if needed"""
@@ -66,12 +67,15 @@ class ApiClient:
                     self.user_id = data.get('userId')
                 if 'role' in data:
                     self.role = data.get('role')
+                if 'permissions' in data:
+                    self.permissions = data.get('permissions', {})
                     
                 if self.token:
                     self.headers['Authorization'] = f'Bearer {self.token}'
                     self.token_validated = True
                     self.server_status = "Connected"
                     print(f"Authentication successful for user {username}")
+                    print(f"Role: {self.role}")
                     self.last_token_refresh = datetime.now()
                     return True
                 else:
@@ -80,26 +84,53 @@ class ApiClient:
                     return False
             else:
                 self.token_validated = False
-                print(f"Authentication failed with status: {response.status_code}")
-                return False
+                error_msg = f"Authentication failed. Status code: {response.status_code}"
+                try:
+                    error_data = response.json()
+                    if 'error' in error_data:
+                        error_msg += f", Error: {error_data['error']}"
+                except:
+                    error_msg += f", Response: {response.text}"
                 
-        except requests.ConnectionError as e:
-            print(f"Connection error: {str(e)}")
-            self.server_status = "Server unavailable"
+                print(error_msg)
+                
+                # Retry logic for network/temporary errors but not for auth errors
+                if response.status_code >= 500 and retry_count < self.max_retries:
+                    retry_count += 1
+                    print(f"Server error, retrying ({retry_count}/{self.max_retries})...")
+                    time.sleep(2 ** retry_count)  # Exponential backoff
+                    return self.login(username, password, retry_count)
+                return False
+        except requests.exceptions.RequestException as e:
+            self.token_validated = False
+            print(f"Connection error during login: {str(e)}")
+            
+            # Retry on connection errors
             if retry_count < self.max_retries:
-                print(f"Retrying authentication (attempt {retry_count + 1})...")
-                time.sleep(2 * (retry_count + 1))  # Exponential backoff
-                return self.login(username, password, retry_count + 1)
-            return False
-        except Exception as e:
-            print(f"Authentication error: {str(e)}")
-            self.server_status = "Error"
-            if retry_count < self.max_retries:
-                print(f"Retrying authentication (attempt {retry_count + 1})...")
-                time.sleep(2 * (retry_count + 1))
-                return self.login(username, password, retry_count + 1)
+                retry_count += 1
+                print(f"Connection error, retrying ({retry_count}/{self.max_retries})...")
+                time.sleep(2 ** retry_count)  # Exponential backoff
+                return self.login(username, password, retry_count)
             return False
 
+    def check_permission(self, permission_key):
+        """Check if the user has a specific permission"""
+        if not self.permissions:
+            return False
+        return self.permissions.get(permission_key, False)
+            
+    def is_admin(self):
+        """Check if current user has admin privileges"""
+        if not self.role:
+            return False
+        return self.role.upper() in ('ADMIN', 'SUPERADMIN')
+    
+    def is_superadmin(self):
+        """Check if current user has superadmin privileges"""
+        if not self.role:
+            return False
+        return self.role.upper() == 'SUPERADMIN'
+        
     def logout(self):
         """Clear user session and token"""
         self.token = None
@@ -111,6 +142,7 @@ class ApiClient:
         self.last_token_refresh = None
         self.user_id = None
         self.role = None
+        self.permissions = {}
         self.headers = {'Content-Type': 'application/json'}
         return True
             
@@ -179,7 +211,3 @@ class ApiClient:
     def get_user_id(self):
         """Get the authenticated user's ID"""
         return self.user_id
-        
-    def is_admin(self):
-        """Check if the authenticated user is an admin"""
-        return self.role == "ROLE_ADMIN" if self.role else False

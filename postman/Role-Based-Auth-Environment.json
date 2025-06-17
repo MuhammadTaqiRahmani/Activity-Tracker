@@ -1,0 +1,67 @@
+{
+	"id": "role-auth-environment-2025",
+	"name": "Role-Based Auth Environment",
+	"values": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8081/api",
+			"type": "default",
+			"enabled": true
+		},
+		{
+			"key": "employee_token",
+			"value": "",
+			"type": "secret",
+			"enabled": true
+		},
+		{
+			"key": "admin_token",
+			"value": "",
+			"type": "secret",
+			"enabled": true
+		},
+		{
+			"key": "superadmin_token",
+			"value": "",
+			"type": "secret",
+			"enabled": true
+		},
+		{
+			"key": "employee_role",
+			"value": "",
+			"type": "default",
+			"enabled": true
+		},
+		{
+			"key": "admin_role",
+			"value": "",
+			"type": "default",
+			"enabled": true
+		},
+		{
+			"key": "superadmin_role",
+			"value": "",
+			"type": "default",
+			"enabled": true
+		},
+		{
+			"key": "employee_userId",
+			"value": "",
+			"type": "default",
+			"enabled": true
+		},
+		{
+			"key": "admin_userId",
+			"value": "",
+			"type": "default",
+			"enabled": true
+		},
+		{
+			"key": "superadmin_userId",
+			"value": "",
+			"type": "default",
+			"enabled": true
+		}
+	],
+	"_postman_variable_scope": "environment"
+}

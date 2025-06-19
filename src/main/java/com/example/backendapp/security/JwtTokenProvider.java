@@ -40,11 +40,14 @@ public class JwtTokenProvider {
         if (!userOpt.isPresent()) {
             throw new RuntimeException("User not found when creating token");
         }
-        
-        User user = userOpt.get();
+          User user = userOpt.get();
         Claims claims = Jwts.claims().setSubject(username);
         claims.put("userId", user.getId());
-        claims.put("role", user.getRole());
+        
+        // Normalize role - remove ROLE_ prefix for JWT token to match Spring Security expectations
+        String roleForToken = user.getRole().startsWith("ROLE_") ? 
+            user.getRole().substring(5) : user.getRole();
+        claims.put("role", roleForToken);
         
         Date now = new Date();
         Date validity = new Date(now.getTime() + validityInMilliseconds);

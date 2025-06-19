@@ -36,34 +36,35 @@ public class SecurityConfig {
             .and()
             .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             .and()
-            .authorizeHttpRequests(auth -> auth
-                // Public endpoints - no authentication required
+            .authorizeHttpRequests(auth -> auth                // Public endpoints - no authentication required
                 .requestMatchers("/api/users/register", "/api/users/login").permitAll()
                 .requestMatchers("/api/test/**").permitAll() // Allow test endpoints
+                  // Profile endpoint - accessible to all authenticated users
+                .requestMatchers("/api/users/profile").hasAnyAuthority("ROLE_SUPERADMIN", "ROLE_ADMIN", "ROLE_EMPLOYEE")
                 
                 // User management endpoints - superadmin and admin only
-                .requestMatchers("/api/users/all", "/api/users/{id}").hasAnyRole("SUPERADMIN", "ADMIN")
-                .requestMatchers("/api/users/{id}/change-password").hasAnyRole("SUPERADMIN", "ADMIN")
-                .requestMatchers("/api/users/deactivate/**").hasAnyRole("SUPERADMIN", "ADMIN")
+                .requestMatchers("/api/users/all", "/api/users/{id}").hasAnyAuthority("ROLE_SUPERADMIN", "ROLE_ADMIN")
+                .requestMatchers("/api/users/{id}/change-password").hasAnyAuthority("ROLE_SUPERADMIN", "ROLE_ADMIN")
+                .requestMatchers("/api/users/deactivate/**").hasAnyAuthority("ROLE_SUPERADMIN", "ROLE_ADMIN")
                 
                 // Admin endpoints with additional restrictions
-                .requestMatchers("/api/admin/**").hasAnyRole("SUPERADMIN", "ADMIN")
+                .requestMatchers("/api/admin/**").hasAnyAuthority("ROLE_SUPERADMIN", "ROLE_ADMIN")
                 
                 // SuperAdmin only endpoints
-                .requestMatchers("/api/system/**").hasRole("SUPERADMIN")
+                .requestMatchers("/api/system/**").hasAuthority("ROLE_SUPERADMIN")
                 
                 // Employee process tracking endpoints
-                .requestMatchers("/api/process-tracking/**").hasAnyRole("SUPERADMIN", "ADMIN", "EMPLOYEE")
-                .requestMatchers("/api/security/**").hasAnyRole("SUPERADMIN", "ADMIN", "EMPLOYEE")
+                .requestMatchers("/api/process-tracking/**").hasAnyAuthority("ROLE_SUPERADMIN", "ROLE_ADMIN", "ROLE_EMPLOYEE")
+                .requestMatchers("/api/security/**").hasAnyAuthority("ROLE_SUPERADMIN", "ROLE_ADMIN", "ROLE_EMPLOYEE")
                 
                 // Analytics endpoints with role-based access
-                .requestMatchers("/api/analytics/user/**").hasAnyRole("SUPERADMIN", "ADMIN", "EMPLOYEE")
-                .requestMatchers("/api/analytics/admin/**").hasAnyRole("SUPERADMIN", "ADMIN")
-                .requestMatchers("/api/analytics/system/**").hasRole("SUPERADMIN")
+                .requestMatchers("/api/analytics/user/**").hasAnyAuthority("ROLE_SUPERADMIN", "ROLE_ADMIN", "ROLE_EMPLOYEE")
+                .requestMatchers("/api/analytics/admin/**").hasAnyAuthority("ROLE_SUPERADMIN", "ROLE_ADMIN")
+                .requestMatchers("/api/analytics/system/**").hasAuthority("ROLE_SUPERADMIN")
                 
                 // Activities endpoints
-                .requestMatchers("/api/activities/user/**").hasAnyRole("SUPERADMIN", "ADMIN", "EMPLOYEE")
-                .requestMatchers("/api/activities/all").hasAnyRole("SUPERADMIN", "ADMIN")
+                .requestMatchers("/api/activities/user/**").hasAnyAuthority("ROLE_SUPERADMIN", "ROLE_ADMIN", "ROLE_EMPLOYEE")
+                .requestMatchers("/api/activities/all").hasAnyAuthority("ROLE_SUPERADMIN", "ROLE_ADMIN")
                 
                 // Any other endpoint requires authentication
                 .anyRequest().authenticated()

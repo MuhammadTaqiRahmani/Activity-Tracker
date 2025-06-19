@@ -70,13 +70,11 @@ public class UserService implements UserDetailsService {
     // Find a user by username
     public Optional<User> findUserByUsername(String username) {
         return userRepository.findByUsername(username);
-    }
-
-    // Find a user by email
+    }    // Find a user by email
     public Optional<User> findUserByEmail(String email) {
         return userRepository.findByEmail(email);
     }
-
+    
     // Retrieve all users
     public List<User> getAllUsers() {
         return userRepository.findAll();
@@ -86,6 +84,16 @@ public class UserService implements UserDetailsService {
     public Optional<User> updateUser(Long id, User updatedUser) {
         return userRepository.findById(id).map(user -> {
             user.setUsername(updatedUser.getUsername());
+            
+            // Update email if provided and validate uniqueness
+            if (updatedUser.getEmail() != null && !updatedUser.getEmail().isEmpty()) {
+                // Check if email is already taken by another user
+                Optional<User> existingEmailUser = userRepository.findByEmail(updatedUser.getEmail());
+                if (existingEmailUser.isPresent() && !existingEmailUser.get().getId().equals(id)) {
+                    throw new RuntimeException("Email already exists: " + updatedUser.getEmail());
+                }
+                user.setEmail(updatedUser.getEmail());
+            }
             
             if (updatedUser.getPassword() != null && !updatedUser.getPassword().isEmpty()) {
                 user.setPassword(passwordEncoder.encode(updatedUser.getPassword()));

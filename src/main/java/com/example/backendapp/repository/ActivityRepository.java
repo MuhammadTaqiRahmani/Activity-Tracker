@@ -1,8 +1,10 @@
 package com.example.backendapp.repository;
 
 import com.example.backendapp.entity.Activity;
+import com.example.backendapp.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.data.domain.Page;
@@ -56,9 +58,7 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
         @Param("userId") Long userId,
         @Param("startDate") LocalDateTime startDate,
         @Param("endDate") LocalDateTime endDate
-    );
-
-    Long countByUserId(Long userId);  // Add this method
+    );    Long countByUserId(Long userId);  // Add this method
 
     @Query("SELECT a FROM Activity a WHERE " +
            "(:userId IS NULL OR a.userId = :userId) AND " +
@@ -70,4 +70,18 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
         @Param("applicationCategory") String applicationCategory,
         Pageable pageable
     );
+    
+    // Methods for orphaned activity detection and cleanup
+    @Query("SELECT DISTINCT a.userId FROM Activity a WHERE a.userId NOT IN (SELECT u.id FROM User u)")
+    List<Long> findOrphanedActivityUserIds();
+    
+    @Query("SELECT COUNT(a) FROM Activity a WHERE a.userId NOT IN (SELECT u.id FROM User u)")
+    Long countOrphanedActivities();
+    
+    @Modifying
+    @Query("DELETE FROM Activity a WHERE a.userId NOT IN (SELECT u.id FROM User u)")
+    int deleteOrphanedActivities();
+    
+    @Query("SELECT a FROM Activity a WHERE a.userId NOT IN (SELECT u.id FROM User u)")
+    List<Activity> findOrphanedActivities();
 }

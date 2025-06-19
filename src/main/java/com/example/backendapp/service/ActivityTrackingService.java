@@ -17,15 +17,14 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional
-public class ActivityTrackingService {
-
-    @Autowired
+public class ActivityTrackingService {    @Autowired
     private ActivityRepository activityRepository;
 
     @Autowired
     private AntiTamperingService antiTamperingService;
-
-    public Activity logActivity(Activity activity) {
+    
+    @Autowired
+    private UserService userService;    public Activity logActivity(Activity activity) {
         System.out.println("\n=== Pre-Save Activity Validation ===");
         System.out.println("Required Fields Check:");
         System.out.println("userId: " + activity.getUserId());
@@ -35,6 +34,16 @@ public class ActivityTrackingService {
         System.out.println("windowTitle: " + activity.getWindowTitle());
         System.out.println("startTime: " + activity.getStartTime());
         System.out.println("endTime: " + activity.getEndTime());
+        
+        // Validate that user exists before saving activity
+        if (activity.getUserId() == null) {
+            throw new IllegalArgumentException("User ID cannot be null");
+        }
+        
+        // Check if user exists to prevent orphaned activities
+        if (!userService.findById(activity.getUserId()).isPresent()) {
+            throw new IllegalArgumentException("User with ID " + activity.getUserId() + " does not exist. Cannot create activity for non-existent user.");
+        }
         
         try {
             enrichActivityData(activity);
@@ -229,11 +238,64 @@ public class ActivityTrackingService {
 
     public Long getTotalActivitiesCount() {
         return activityRepository.count();
-    }
-
-    // Additional helper method to get count for a specific user
+    }    // Additional helper method to get count for a specific user
     public Long getTotalActivitiesCountForUser(Long userId) {
         return activityRepository.countByUserId(userId);
+    }
+    
+    /**
+     * Check for orphaned activities - activities that reference non-existent users
+     * @return Map containing orphaned activity information
+     */
+    public Map<String, Object> checkOrphanedActivities() {
+        Map<String, Object> result = new HashMap<>();
+        
+        List<Long> orphanedUserIds = activityRepository.findOrphanedActivityUserIds();
+        Long orphanedCount = activityRepository.countOrphanedActivities();
+        
+        result.put("hasOrphanedActivities", !orphanedUserIds.isEmpty());
+        result.put("orphanedUserIds", orphanedUserIds);
+        result.put("orphanedActivityCount", orphanedCount);
+        result.put("timestamp", LocalDateTime.now());
+        
+        if (!orphanedUserIds.isEmpty()) {
+            System.err.println("WARNING: Found " + orphanedCount + " orphaned activities for user IDs: " + orphanedUserIds);
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Clean up orphaned activities - removes activities that reference non-existent users
+     * @return Number of orphaned activities removed
+     */
+    @Transactional
+    public int cleanupOrphanedActivities() {
+        Map<String, Object> orphanedInfo = checkOrphanedActivities();
+        
+        if (!(Boolean) orphanedInfo.get("hasOrphanedActivities")) {
+            System.out.println("No orphaned activities found to clean up.");
+            return 0;
+        }
+        
+        List<Long> orphanedUserIds = (List<Long>) orphanedInfo.get("orphanedUserIds");
+        Long orphanedCount = (Long) orphanedInfo.get("orphanedActivityCount");
+        
+        System.out.println("Cleaning up " + orphanedCount + " orphaned activities for user IDs: " + orphanedUserIds);
+        
+        int deletedCount = activityRepository.deleteOrphanedActivities();
+        
+        System.out.println("Successfully deleted " + deletedCount + " orphaned activities.");
+        
+        return deletedCount;
+    }
+    
+    /**
+     * Get detailed information about orphaned activities
+     * @return List of orphaned activities with full details
+     */
+    public List<Activity> getOrphanedActivitiesDetails() {
+        return activityRepository.findOrphanedActivities();
     }
 
     @Data

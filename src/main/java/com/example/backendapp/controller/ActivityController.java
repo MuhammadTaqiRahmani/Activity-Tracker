@@ -204,11 +204,68 @@ public class ActivityController {
                 a -> a.getStatus().toString(),
                 Collectors.counting()
             ));
-    }
-
-    private Long calculateTotalDuration(List<Activity> activities) {
+    }    private Long calculateTotalDuration(List<Activity> activities) {
         return activities.stream()
             .mapToLong(Activity::getDurationSeconds)
             .sum();
+    }
+    
+    // Orphaned Activities Management Endpoints (Admin only)
+    
+    /**
+     * Check for orphaned activities - activities that reference non-existent users
+     */
+    @GetMapping("/admin/orphaned-check")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> checkOrphanedActivities() {
+        try {
+            Map<String, Object> result = activityService.checkOrphanedActivities();
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Collections.singletonMap("error", "Failed to check orphaned activities: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Get detailed information about orphaned activities
+     */
+    @GetMapping("/admin/orphaned-details")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getOrphanedActivitiesDetails() {
+        try {
+            List<Activity> orphanedActivities = activityService.getOrphanedActivitiesDetails();
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("orphanedActivities", orphanedActivities);
+            response.put("count", orphanedActivities.size());
+            response.put("timestamp", LocalDateTime.now());
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Collections.singletonMap("error", "Failed to get orphaned activities details: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Clean up orphaned activities - removes activities that reference non-existent users
+     */
+    @DeleteMapping("/admin/orphaned-cleanup")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> cleanupOrphanedActivities() {
+        try {
+            int deletedCount = activityService.cleanupOrphanedActivities();
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Orphaned activities cleanup completed");
+            response.put("deletedCount", deletedCount);
+            response.put("timestamp", LocalDateTime.now());
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Collections.singletonMap("error", "Failed to cleanup orphaned activities: " + e.getMessage()));
+        }
     }
 }

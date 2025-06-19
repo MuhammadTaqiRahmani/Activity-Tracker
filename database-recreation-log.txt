@@ -1,0 +1,1 @@
+Sqlcmd: Error: Microsoft ODBC Driver 17 for SQL Server : Login failed for user 'sql1\Guest'..

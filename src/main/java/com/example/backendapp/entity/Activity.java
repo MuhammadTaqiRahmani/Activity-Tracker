@@ -11,9 +11,7 @@ import org.hibernate.annotations.CreationTimestamp;
 public class Activity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    // Remove the @ManyToOne relationship and keep only the userId
+    private Long id;    // Foreign key reference to User entity (constraint handled by database migration)
     @Column(name = "user_id", nullable = false)
     private Long userId;
 

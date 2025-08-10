@@ -1,13 +1,17 @@
-# Employee Productivity Tracking System
+# Employee Productivity Tracking System - Backend API
 
-[![Status](https://img.shields.io/badge/status-production%20ready-green.svg)](https://github.com/your-repo/activity-tracker)
+[![Status](https://img.shields.io/badge/status-production%20ready-green.svg)](https://github.com/MuhammadTaqiRahmani/Activity-Tracker)
 [![Java](https://img.shields.io/badge/Java-17%2B-orange.svg)](https://openjdk.java.net/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![React](https://img.shields.io/badge/React-18.2.0-blue.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.2.2-blue.svg)](https://www.typescriptlang.org/)
 [![SQL Server](https://img.shields.io/badge/SQL%20Server-2019%2B-red.svg)](https://www.microsoft.com/en-us/sql-server)
 
-A comprehensive full-stack web application designed to monitor, analyze, and optimize employee productivity across organizations. The system combines a robust Spring Boot backend with a modern React frontend to deliver real-time activity tracking, detailed analytics, and powerful administrative tools.
+A comprehensive employee productivity tracking system designed to monitor, analyze, and optimize productivity across organizations. This repository contains the robust Spring Boot backend that powers the system, while the modern React frontend is available in a separate repository.
+
+## 🔗 **Related Repositories**
+- **Frontend (React)**: [https://github.com/MuhammadTaqiRahmani/React-frontend](https://github.com/MuhammadTaqiRahmani/React-frontend)
+- **Backend (Spring Boot)**: This repository
 
 ## 🎯 Key Features
 
@@ -48,12 +52,14 @@ A comprehensive full-stack web application designed to monitor, analyze, and opt
 │                    CLIENT APPLICATIONS                      │
 ├─────────────────────────────────────────────────────────────┤
 │  React Frontend  │  Desktop Client  │  Mobile App  │  APIs   │
-│  (Port 3000)     │  (Future)        │  (Future)    │         │
+│  (Separate Repo) │  (Future)        │  (Future)    │         │
+│  Port 3000       │                  │              │         │
 └─────────────────┴──────────────────┴──────────────┴─────────┘
-                              │ HTTP/HTTPS
+                              │ HTTP/HTTPS (CORS)
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                  SPRING BOOT APPLICATION                    │
+│                      (This Repository)                     │
 │                      (Port 8080)                           │
 ├─────────────────────┬───────────────────┬───────────────────┤
 │   AUTHENTICATION    │   BUSINESS LOGIC  │   DATA ACCESS     │
@@ -73,7 +79,15 @@ A comprehensive full-stack web application designed to monitor, analyze, and opt
 
 ## 💻 Technology Stack
 
-### **Frontend**
+### **Backend (This Repository)**
+- **Spring Boot 3.x** - Enterprise Java framework
+- **Java 17+** - Modern Java with latest features
+- **Spring Security 6.x** - Authentication & authorization
+- **Spring Data JPA** - Data access abstraction
+- **Maven** - Build management
+- **JWT** - Stateless authentication
+
+### **Frontend ([Separate Repository](https://github.com/MuhammadTaqiRahmani/React-frontend))**
 - **React 18.2.0** - Modern React with Concurrent Features
 - **TypeScript 5.2.2** - Type-safe development
 - **Vite 5.0.0** - Fast build tool and dev server
@@ -81,14 +95,6 @@ A comprehensive full-stack web application designed to monitor, analyze, and opt
 - **React Query 5.13.4** - Server state management
 - **React Router DOM 6.20.1** - Client-side routing
 - **Radix UI** - Accessible component library
-
-### **Backend**
-- **Spring Boot 3.x** - Enterprise Java framework
-- **Java 17+** - Modern Java with latest features
-- **Spring Security 6.x** - Authentication & authorization
-- **Spring Data JPA** - Data access abstraction
-- **Maven** - Build management
-- **JWT** - Stateless authentication
 
 ### **Database**
 - **Microsoft SQL Server** - Primary database
@@ -106,19 +112,24 @@ A comprehensive full-stack web application designed to monitor, analyze, and opt
 
 ### Installation
 
-1. **Clone the repository**
+1. **Clone the backend repository**
    ```bash
-   git clone https://github.com/your-repo/activity-tracker.git
-   cd activity-tracker
+   git clone https://github.com/MuhammadTaqiRahmani/Activity-Tracker.git
+   cd Activity-Tracker
    ```
 
-2. **Set up the database**
+2. **Clone the frontend repository**
+   ```bash
+   git clone https://github.com/MuhammadTaqiRahmani/React-frontend.git
+   ```
+
+3. **Set up the database**
    ```powershell
-   # Run the database setup script
+   # Run the database setup script in the backend directory
    .\recreate-database.ps1
    ```
 
-3. **Configure application properties**
+4. **Configure application properties**
    ```bash
    # Update src/main/resources/application.properties
    spring.datasource.url=jdbc:sqlserver://localhost:1433;databaseName=ActivityTrackerDB
@@ -126,15 +137,15 @@ A comprehensive full-stack web application designed to monitor, analyze, and opt
    spring.datasource.password=your_password
    ```
 
-4. **Start the backend**
+5. **Start the backend**
    ```powershell
    # Build and start the Spring Boot application
    .\build-and-start.bat
    ```
 
-5. **Start the frontend**
+6. **Start the frontend**
    ```bash
-   cd frontend
+   cd ../React-frontend
    npm install
    npm run dev
    ```
@@ -155,33 +166,6 @@ A comprehensive full-stack web application designed to monitor, analyze, and opt
    - Use the admin credentials created in step 1
    - Access the admin dashboard to create additional users
 
-## 📁 Project Structure
-
-```
-Activity-Tracker/
-├── src/main/java/com/example/backendapp/    # Spring Boot backend
-│   ├── controller/                          # REST API endpoints
-│   ├── service/                            # Business logic
-│   ├── repository/                         # Data access layer
-│   ├── entity/                             # JPA entities
-│   ├── dto/                                # Data transfer objects
-│   ├── security/                           # Security configuration
-│   └── config/                             # Application configuration
-├── frontend/                               # React frontend
-│   ├── src/
-│   │   ├── components/                     # Reusable UI components
-│   │   ├── pages/                          # Route components
-│   │   ├── hooks/                          # Custom React hooks
-│   │   ├── services/                       # API services
-│   │   ├── types/                          # TypeScript types
-│   │   └── utils/                          # Utility functions
-│   ├── public/                             # Static assets
-│   └── package.json                        # Frontend dependencies
-├── scripts/                                # PowerShell scripts
-├── docs/                                   # Documentation
-├── pom.xml                                 # Maven configuration
-└── README.md                               # This file
-```
 
 ## 🔐 User Roles & Permissions
 
@@ -208,6 +192,40 @@ Activity-Tracker/
 - **Database Status**: ✅ Optimized with FK constraints
 - **Performance**: ✅ Indexed for optimal query performance
 
+## 📁 Repository Structure
+
+### **Backend Repository** (This Repo)
+```
+Activity-Tracker/
+├── src/main/java/com/example/backendapp/    # Spring Boot backend
+│   ├── controller/                          # REST API endpoints
+│   ├── service/                            # Business logic
+│   ├── repository/                         # Data access layer
+│   ├── entity/                             # JPA entities
+│   ├── dto/                                # Data transfer objects
+│   ├── security/                           # Security configuration
+│   └── config/                             # Application configuration
+├── src/main/resources/                     # Configuration files
+├── scripts/                                # PowerShell scripts
+├── docs/                                   # Documentation
+├── pom.xml                                 # Maven configuration
+└── README.md                               # This file
+```
+
+### **Frontend Repository** ([React-frontend](https://github.com/MuhammadTaqiRahmani/React-frontend))
+```
+React-frontend/
+├── src/
+│   ├── components/                         # Reusable UI components
+│   ├── pages/                              # Route components
+│   ├── hooks/                              # Custom React hooks
+│   ├── services/                           # API services
+│   ├── types/                              # TypeScript types
+│   └── utils/                              # Utility functions
+├── public/                                 # Static assets
+└── package.json                            # Frontend dependencies
+```
+
 ## 🛠️ Development
 
 ### Backend Development
@@ -224,7 +242,9 @@ mvn spring-boot:run -Dspring-boot.run.profiles=dev
 
 ### Frontend Development
 ```bash
-cd frontend
+# Clone the frontend repository if not already done
+git clone https://github.com/MuhammadTaqiRahmani/React-frontend.git
+cd React-frontend
 
 # Install dependencies
 npm install
